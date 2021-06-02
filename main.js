@@ -158,84 +158,14 @@ var textUpdateTimeoutID = 0;
 var textUpdateTimeoutSecond = 30; // 音声認識結果が更新されない場合にクリアするまでの秒数（0以下の場合は自動クリアしない）
 
 function vr_function() {
-  window.SpeechRecognition = window.SpeechRecognition || webkitSpeechRecognition;
-  recognition = new webkitSpeechRecognition();
-  recognition.lang = lang;
-  recognition.interimResults = true;
-  recognition.continuous = true;
-
-  recognition.onsoundstart = function() {
-    document.getElementById('status').innerHTML = "認識中...";
-    document.getElementById('status').className = "processing";
-  };
-  recognition.onnomatch = function() {
-    document.getElementById('status').innerHTML = "音声を認識できませんでした";
-    document.getElementById('status').className = "error";
-  };
-  recognition.onerror = function() {
-    document.getElementById('status').innerHTML = "エラー";
-    document.getElementById('status').className = "error";
-    if (flag_speech == 0)
-      vr_function();
-  };
-  recognition.onsoundend = function() {
-    document.getElementById('status').innerHTML = "停止中";
-    document.getElementById('status').className = "error";
-    vr_function();
-  };
-
-  recognition.onresult = function(event) {
-    var results = event.results;
-    for (var i = event.resultIndex; i < results.length; i++) {
-      if (results[i].isFinal) {
-        var result_transcript = results[i][0].transcript
-        if (lang == 'ja-JP') {
-          result_transcript += '。';
-        }
-
-        if (document.getElementById('checkbox_hiragana').checked && lang == 'ja-JP') {
-          document.getElementById('result_text').innerHTML = resultToHiragana(result_transcript);
-        } else {
-          document.getElementById('result_text').innerHTML = result_transcript;
-        }
-        setTimeoutForClearText();
-
-        if (document.getElementById('checkbox_timestamp').checked) {
-          // タイムスタンプ機能
-          var now = new window.Date();
-          var Year = now.getFullYear();
-          var Month = (("0" + (now.getMonth() + 1)).slice(-2));
-          var Date = ("0" + now.getDate()).slice(-2);
-          var Hour = ("0" + now.getHours()).slice(-2);
-          var Min = ("0" + now.getMinutes()).slice(-2);
-          var Sec = ("0" + now.getSeconds()).slice(-2);
-
-          var timestamp = Year + '-' + Month + '-' + Date + ' ' + Hour + ':' + Min + ':' + Sec + '&#009;'
-          result_transcript = timestamp + result_transcript
-        }
-
-        document.getElementById('result_log').insertAdjacentHTML('beforeend', result_transcript + '\n');
-        textAreaHeightSet(document.getElementById('result_log'));
-        vr_function();
-        flag_speech = 0;
-      } else {
-        var result_transcript = results[i][0].transcript;
-
-        if (document.getElementById('checkbox_hiragana').checked && lang == 'ja-JP') {
-          document.getElementById('result_text').innerHTML = resultToHiragana(result_transcript);
-        } else {
-          document.getElementById('result_text').innerHTML = result_transcript;
-        }
-
-        flag_speech = 1;
-      }
-    }
-  }
-
+  window.electron.removeAllListeners("onResult");
+  window.electron.on("onResult", onResult);
+  window.electron.send("startRecognition", {
+    languageCode: lang,
+  });
   flag_speech = 0;
-  document.getElementById('status').innerHTML = "待機中";
-  document.getElementById('status').className = "ready";
-  recognition.start();
+  document.getElementById("status").innerHTML = "待機中";
+  document.getElementById("status").className = "ready";
 }
 
 function updateTextClearSecond() {
